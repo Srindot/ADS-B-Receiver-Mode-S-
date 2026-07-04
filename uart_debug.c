@@ -2,7 +2,7 @@
  * purpose: Responsible for streaming the data through uart to host computer.
  */
 
-// Power routing
+// Reset Clock and control Register
 #define RCC_BASE 0x40023800
 #define RCC_AHB1ENR (*(volatile unsigned int *)(RCC_BASE + 0x30))
 #define RCC_APB1ENR (*(volatile unsigned int *)(RCC_BASE + 0x40))
