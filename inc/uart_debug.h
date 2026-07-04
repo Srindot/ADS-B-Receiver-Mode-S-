@@ -4,6 +4,6 @@
 // Function Definations
 void uart2_init(void);
 void uart2_send_char(char);
-void uart2_send_string(char);
+void uart2_send_string(char *string);
 
 #endif

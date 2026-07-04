@@ -27,8 +27,7 @@ LDSCRIPT  = linker_script.ld
 CPU       = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 # Added -I$(INC_DIR) to tell the compiler where to look for .h files
 CFLAGS    = $(CPU) -Wall -g -O0 -I$(INC_DIR)
-LDFLAGS   = $(CPU) -T$(LDSCRIPT) -nostartfiles -Wl,-Map=$(TARGET).map
-
+LDFLAGS   = $(CPU) -T$(LDSCRIPT) -nostartfiles -Wl,-Map=$(TARGET).map --specs=nosys.specs
 # ==============================================================================
 # Build Rules
 # ==============================================================================

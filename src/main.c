@@ -7,6 +7,8 @@
 #include "timer_capture.h"
 #include "uart_debug.h"
 
+void SystemInit(void) {}
+void _init(void) {}
 int main(void) {
   // 1. Initialize UART2 for USB serial communication (115200 Baud)
   uart2_init();
