@@ -31,7 +31,7 @@ void uart2_init(void) {
   GPIOA_AFRL |= (7 << 8);
 
   // Set Buad Rate = 390.625
-  UART2_BRR = 0x0187;
+  UART2_BRR = 0x008B; // UART2_BRR = 0x0187;
 
   // Enable Tx
   UART2_CR1 = 0;
