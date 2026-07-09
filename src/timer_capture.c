@@ -10,6 +10,7 @@
 
 // Include the Header file for the Function Definition
 #include "timer_capture.h"
+#include "adsb_decoder.h"
 
 // ==============================================================================
 // Registers Definition
@@ -104,9 +105,14 @@ void tim1_init(void) {
 void TIM1_CC_IRQHandler() {
   // Checking for incoming pulse
   if ((TIM1_SR & (1 << 1)) != 0) {
-    // last captured pulse's time
+    // Snapshot the timer value at the moment the edge arrived
     last_captured_time = TIM1_CCR1;
-    // erasing for new bits
+
+    // Forward this timestamp to the ADS-B decoder state machine
+    // (preamble detection → bit decoding → CRC check → UART output)
+    adsb_process_timestamp(last_captured_time);
+
+    // Clear the CC1 interrupt flag so the next edge can trigger again
     TIM1_SR &= ~(1 << 1);
   }
 }

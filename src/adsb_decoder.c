@@ -1,5 +1,5 @@
 #include "adsb_decoder.h"
-// #include "uart_debug.h"
+#include "uart_debug.h"  // Bug #2 fix: was commented out, no output could ever print
 
 // --- Global State Variables ---
 unsigned int previous_timestamp = 0;
@@ -8,17 +8,33 @@ unsigned int delta_history[3] = {0, 0, 0};
 uint8_t payload[14];
 int bit_counter = 0;
 
-// Standard ADS-B 24-bit generator polynomial
-#define ADS_B_POLYNOMIAL 0xFFFA04
+// Debug counters — incremented in ISR, read by main loop
+volatile unsigned int edge_count = 0;
+volatile unsigned int preamble_count = 0;
+volatile unsigned int crc_fail_count = 0;
+volatile unsigned int crc_pass_count = 0;
+
+// Standard ADS-B / Mode S CRC-24 generator polynomial:
+//   P(x) = x^24 + x^23 + x^10 + x^3 + 1
+//   In 24-bit hex (without the implied x^24 leading 1): 0xFFF409
+//
+// Bug #7 fix: was 0xFFFA04 which has wrong bits set — every CRC would fail
+// and all valid frames would be silently discarded.
+#define ADS_B_POLYNOMIAL 0xFFF409
 
 void adsb_process_timestamp(unsigned int current_timestamp) {
-  // Calculate pulse gap in 0.1us ticks
-  unsigned int delta = current_timestamp - previous_timestamp;
+  // Calculate pulse gap in timer ticks (0.1 us at 10 MHz timer clock).
+  //
+  // Bug #6 fix: The old code did a 32-bit subtraction then added 0xFFFF on
+  // overflow, which is off-by-one. Since both timestamps are 16-bit values
+  // from a 16-bit counter (ARR=0xFFFF), masking the 32-bit subtraction result
+  // to 16 bits gives the correct modular delta and naturally handles wrap-
+  // around with no branch needed.
+  unsigned int delta = (current_timestamp - previous_timestamp) & 0xFFFF;
 
-  // Handle 16-bit timer overflow
-  if (current_timestamp < previous_timestamp) {
-    delta += 0xFFFF;
-  }
+  // Count every edge the ISR delivers to the decoder
+  edge_count++;
+
   previous_timestamp = current_timestamp;
 
   // State 0: Preamble Detection
@@ -34,6 +50,7 @@ void adsb_process_timestamp(unsigned int current_timestamp) {
 
       decoder_state = 1;
       bit_counter = 0;
+      preamble_count++;
       for (int i = 0; i < 14; i++) {
         payload[i] = 0;
       }
@@ -92,6 +109,14 @@ void adsb_crc_check(void) {
 
   // Valid CRC results in 0x000000 for the final 3 bytes
   if (temp_payload[11] == 0 && temp_payload[12] == 0 && temp_payload[13] == 0) {
-    // uart2_send_string("Valid Aircraft Data Intercepted!\r\n");
+    crc_pass_count++;
+    // Print the raw hex frame: "[ADS-B] 8D4840D6202CC371C32CE0576098"
+    uart2_send_string("[ADS-B] ");
+    for (int i = 0; i < 14; i++) {
+      uart2_send_hex_byte(payload[i]);
+    }
+    uart2_send_string("\r\n");
+  } else {
+    crc_fail_count++;
   }
 }

@@ -30,8 +30,10 @@ void uart2_init(void) {
   GPIOA_AFRL &= ~(0xF << 8);
   GPIOA_AFRL |= (7 << 8);
 
-  // Set Buad Rate = 390.625
-  UART2_BRR = 0x008B; // UART2_BRR = 0x0187;
+  // Baud rate for 45 MHz APB1 clock (after PLL + APB1 /4 prescaler):
+  // USARTDIV = 45MHz / (16 * 115200) = 24.4140625
+  // Mantissa = 24 = 0x18, Fraction = 0.414 * 16 ≈ 7 → BRR = 0x0187
+  UART2_BRR = 0x0187;
 
   // Enable Tx
   UART2_CR1 = 0;
@@ -50,5 +52,31 @@ void uart2_send_char(char c) {
 void uart2_send_string(char *string) {
   while (*string) {
     uart2_send_char(*string++);
+  }
+}
+
+// Print one byte as two uppercase hex characters (e.g. 0x8D → "8D")
+void uart2_send_hex_byte(unsigned char byte) {
+  const char hex[] = "0123456789ABCDEF";
+  uart2_send_char(hex[(byte >> 4) & 0x0F]);
+  uart2_send_char(hex[byte & 0x0F]);
+}
+
+// Print an unsigned integer as a decimal string (e.g. 12345 → "12345")
+void uart2_send_uint(unsigned int val) {
+  char buf[11]; // max 10 digits for 32-bit uint + safety
+  int i = 0;
+  if (val == 0) {
+    uart2_send_char('0');
+    return;
+  }
+  // Extract digits in reverse order
+  while (val > 0) {
+    buf[i++] = '0' + (val % 10);
+    val /= 10;
+  }
+  // Print digits in correct order
+  while (i > 0) {
+    uart2_send_char(buf[--i]);
   }
 }

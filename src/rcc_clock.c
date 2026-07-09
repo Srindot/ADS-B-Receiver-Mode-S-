@@ -92,10 +92,12 @@ void clock_setup(void) {
 
   // PLL Multiplication Operation
   // Bit 22: Set PLL Source to HSE (1)
+  // Bits 27:24 (PLLQ): Divide by 8 → 360/8 = 45 MHz (must be ≥2, 0 is INVALID)
   // Bits 5:0 (PLLM): Divide by 8
   // Bits 14:6 (PLLN): Multiply by 360
   // Bits 17:16 (PLLP): 00 means divide by 2
-  RCC_PLLCFGR = (1 << 22) | (0 << 16) | (360 << 6) | (8 << 0);
+  // VCO = 8MHz / 8 * 360 = 360 MHz → SYSCLK = 360 / 2 = 180 MHz
+  RCC_PLLCFGR = (8 << 24) | (1 << 22) | (0 << 16) | (360 << 6) | (8 << 0);
 
   // Turning on the PLL
   RCC_CR |= (1 << 24);
@@ -105,7 +107,15 @@ void clock_setup(void) {
     // Wait untill Stablized
   }
 
-  //  Binary 10 (Decimal 2) selects the PLL.
+  // APB1 prescaler = /4 → 180MHz / 4 = 45 MHz (max rated = 45 MHz)
+  // Bits [12:10] = 101
+  RCC_CFGR |= (5 << 10);
+
+  // APB2 prescaler = /2 → 180MHz / 2 = 90 MHz (max rated = 90 MHz)
+  // Bits [15:13] = 100
+  RCC_CFGR |= (4 << 13);
+
+  //  Binary 10 (Decimal 2) selects the PLL as system clock source.
   RCC_CFGR |= (2 << 0);
 
   while ((RCC_CFGR & (3 << 2)) != (2 << 2)) {
